@@ -78,6 +78,7 @@ pub struct Decorator<'a> {
 }
 
 impl<'a> Decorator<'a> {
+    /// Create a new Decorator instance
     pub fn new(
         config: &'a Config<'a>,
         response_headers: &'a mut Vec<u8>,
@@ -223,16 +224,27 @@ impl std::str::FromStr for Header {
 ///
 #[derive(Default)]
 pub struct Stat {
+    /// IP address of the server
     pub ip_address: Option<String>,
+    /// HTTP version used
     pub http_version: Option<String>,
+    /// DNS lookup time
     pub name_lookup: Duration,
+    /// TCP handshake time
     pub connect: Duration,
+    /// TLS handshake time
     pub app_connect: Duration,
+    /// Time to start the transfer
     pub pre_transfer: Duration,
+    /// Time to start receiving the response
     pub start_transfer: Duration,
+    /// Total time taken
     pub total: Duration,
+    /// Response status code
     pub response_status_code: Option<i32>,
+    /// Response headers
     pub response_headers: Vec<Header>,
+    /// Response body
     pub response_body: Vec<u8>,
 }
 
