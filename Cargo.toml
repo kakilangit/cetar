@@ -2,6 +2,13 @@
 name = "cetar"
 version = "0.1.0"
 edition = "2021"
+description = "💥 CURL execution timing analyzer"
+license = "MIT"
+tags = ["curl", "timing", "analyzer", "http", "https", "cli"]
+
+[[bin]]
+name = "cetar"
+path = "src/main.rs"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

@@ -1,4 +1,4 @@
-![Dall-E generated cetar image](static/cetar.png)
+![Dall-E generated cetar image](https://raw.githubusercontent.com/kakilangit/cetar/main/static/cetar.png)
 
 # Cetar
 
@@ -11,7 +11,7 @@ Cetar _/ce-tar/_ _n_ is the imitation of the sound of a whip being hit in Indone
 ## Installation
 
 ```shell
-$ cargo install --path .
+$ cargo install cetar
 ```
 
 ## Usage
@@ -38,7 +38,7 @@ Options:
 
 ## Screenshot
 
-![Screenshot](static/cetar-screenshot.png)
+![Screenshot](https://raw.githubusercontent.com/kakilangit/cetar/main/static/cetar-screenshot.png)
 
 ## License
 
