@@ -1,3 +1,16 @@
+/// Make color text in terminal
+///
+/// # Example
+///
+/// ```rust
+/// use cetar::color::make_color;
+///
+/// let red = make_color!(31, "Red text");
+/// let green = make_color!(32, "Green text");
+///
+/// println!("{} {}", red, green);
+/// ```
+///
 #[macro_export]
 macro_rules! make_color {
     ($color:expr, $text:expr) => {
@@ -5,6 +18,16 @@ macro_rules! make_color {
     };
 }
 
+/// Print text in terminal with red color
+///
+/// # Example
+///
+/// ```rust
+/// use cetar::color::{print_error, make_color};
+///
+/// print_error!("This is an error message");
+/// ```
+///
 #[macro_export]
 macro_rules! print_error {
     ($($arg:tt)*) => {
@@ -12,6 +35,8 @@ macro_rules! print_error {
     };
 }
 
+/// Enum for ANSI color codes
+///
 #[derive(Debug, Copy, Clone)]
 pub enum Color {
     Black = 30,
@@ -22,6 +47,12 @@ pub enum Color {
     Magenta = 35,
     Cyan = 36,
     White = 37,
+}
+
+impl Default for Color {
+    fn default() -> Self {
+        Self::White
+    }
 }
 
 impl TryFrom<String> for Color {
@@ -43,6 +74,19 @@ impl TryFrom<String> for Color {
 }
 
 impl Color {
+    /// Paint text with color
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use cetar::color::Color;
+    ///
+    /// let red = Color::Red.paint("Red text");
+    /// let green = Color::Green.paint("Green text");
+    ///
+    /// println!("{} {}", red, green);
+    /// ```
+    ///
     pub fn paint(&self, text: &str) -> String {
         make_color!(*self as u8, text)
     }

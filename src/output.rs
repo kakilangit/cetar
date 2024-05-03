@@ -2,7 +2,7 @@ use std::io::Write;
 use std::time::Duration;
 
 use crate::network::Config;
-use crate::stat::Stat;
+use crate::network::Stat;
 
 struct NetworkEvent<'a> {
     name: &'a str,
@@ -88,13 +88,27 @@ impl<'a> NetworkEvent<'a> {
     }
 }
 
-/// UI for displaying network timings
-pub struct Ui<'a> {
+/// Screen is a struct that represents the screen output.
+///
+/// # Example
+///
+/// ```rust
+/// use cetar::network::{Config, Stat};
+/// use cetar::output::Ui;
+/// use std::time::Duration;
+///
+/// let config = Config::default();
+/// let stat = Stat::default();
+///
+/// let screen = Screen::new(&config, &stat);
+/// screen.display();
+/// ```
+pub struct Screen<'a> {
     config: &'a Config<'a>,
     stat: &'a Stat,
 }
 
-impl<'a> Ui<'a> {
+impl<'a> Screen<'a> {
     const PADDING: usize = 35;
     const MAX_PADDING: usize = 50;
 
@@ -169,7 +183,7 @@ impl<'a> Ui<'a> {
                 .http_version
                 .as_ref()
                 .unwrap_or(&"Unknown".to_string()),
-            self.stat.response_code.unwrap_or_default()
+            self.stat.response_status_code.unwrap_or_default()
         );
 
         let max_name_len = self
@@ -206,7 +220,8 @@ impl<'a> Ui<'a> {
         }
     }
 
-    /// Display the network timings
+    /// Display the screen output.
+    ///
     pub fn display(&self) {
         println!();
         println!(
@@ -233,6 +248,20 @@ impl<'a> Ui<'a> {
     }
 }
 
+/// Handle the output of the request.
+///
+/// # Example
+///
+/// ```rust
+/// use cetar::network::{Config, Stat};
+/// use cetar::output::handle_output;
+///
+/// let config = Config::default();
+/// let stat = Stat::default();
+///
+/// handle_output(&config, &stat).unwrap();
+///
+/// ```
 pub fn handle_output(config: &Config, stat: &Stat) -> anyhow::Result<()> {
     if let Some(output) = &config.output {
         if let Some(body) = stat.utf8_response_body() {
