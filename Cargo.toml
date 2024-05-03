@@ -1,10 +1,13 @@
 [package]
 name = "cetar"
-version = "0.1.1"
+version = "0.1.3"
 edition = "2021"
 description = "💥 CURL execution timing analyzer"
+documentation = "https://docs.rs/cetar"
+repository = "https://github.com/kakilangit/cetar"
 license = "MIT"
-tags = ["curl", "timing", "analyzer", "http", "https", "cli"]
+keywords = ["curl", "cetar", "cli"]
+authors = ["kakilangit <crates@kakilangit.dev>"]
 
 [[bin]]
 name = "cetar"

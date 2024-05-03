@@ -87,7 +87,7 @@ fn execute() -> anyhow::Result<()> {
     let result = cetar::network::send_request(&config)?;
 
     cetar::output::handle_output(&config, &result)?;
-    cetar::output::Ui::new(&config, &result).display();
+    cetar::output::Screen::new(&config, &result).display();
 
     Ok(())
 }
