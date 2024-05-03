@@ -32,15 +32,15 @@ impl<'a> NetworkEvent<'a> {
     }
 
     fn server_processing(stat: &Stat) -> Option<Self> {
-        stat.waiting().map(|duration| Self {
+        stat.server_processing().map(|duration| Self {
             name: "Server Processing",
             duration,
         })
     }
 
-    fn data_transfer(stat: &Stat) -> Option<Self> {
-        stat.data_transfer().map(|duration| Self {
-            name: "Data Transfer",
+    fn content_transfer(stat: &Stat) -> Option<Self> {
+        stat.content_transfer().map(|duration| Self {
+            name: "Content Transfer",
             duration,
         })
     }
@@ -94,7 +94,7 @@ impl<'a> NetworkEvent<'a> {
 ///
 /// ```rust
 /// use cetar::network::{Config, Stat};
-/// use cetar::output::Ui;
+/// use cetar::output::Screen;
 /// use std::time::Duration;
 ///
 /// let config = Config::default();
@@ -154,7 +154,7 @@ impl<'a> Screen<'a> {
             NetworkEvent::tcp_handshake(self.stat),
             NetworkEvent::tls_handshake(self.stat),
             NetworkEvent::server_processing(self.stat),
-            NetworkEvent::data_transfer(self.stat),
+            NetworkEvent::content_transfer(self.stat),
         ];
 
         self.display_events(events);
@@ -271,4 +271,185 @@ pub fn handle_output(config: &Config, stat: &Stat) -> anyhow::Result<()> {
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod test {
+    use std::{io::Read, str::FromStr};
+
+    use crate::network::Header;
+
+    use super::*;
+
+    #[test]
+    fn test_scale_factor() {
+        let totals = vec![
+            (Duration::from_millis(0), 1.0),
+            (Duration::from_millis(100), 1.0),
+            (Duration::from_millis(101), 5.0),
+            (Duration::from_millis(500), 5.0),
+            (Duration::from_millis(501), 10.0),
+            (Duration::from_millis(1000), 10.0),
+            (Duration::from_millis(1001), 50.0),
+            (Duration::from_millis(5000), 50.0),
+            (Duration::from_millis(5001), 100.0),
+            (Duration::from_millis(10000), 100.0),
+            (Duration::from_millis(10001), 1000.0),
+        ];
+
+        for (total, expected) in totals.iter() {
+            let stat = Stat {
+                total: *total,
+                ..Stat::default()
+            };
+            let config = Config::default();
+            let screen = Screen::new(&config, &stat);
+            assert_eq!(screen.scale_factor(), *expected);
+        }
+    }
+
+    #[test]
+    fn test_event_bar() {
+        let stat = &Stat {
+            name_lookup: Duration::from_millis(1),
+            connect: Duration::from_millis(2),
+            app_connect: Duration::from_millis(3),
+            pre_transfer: Duration::from_millis(4),
+            start_transfer: Duration::from_millis(5),
+            total: Duration::from_millis(6),
+            ..Stat::default()
+        };
+        let config = Config::default();
+        let screen = Screen::new(&config, &stat);
+
+        let events = vec![
+            (NetworkEvent::dns_lookup(stat), "█"),
+            (NetworkEvent::tcp_handshake(stat), "█"),
+            (NetworkEvent::tls_handshake(stat), "█"),
+            (NetworkEvent::server_processing(stat), "█"),
+            (NetworkEvent::content_transfer(stat), "█"),
+        ];
+
+        for (event, expected) in events.into_iter() {
+            let ev = event.unwrap();
+            assert_eq!(screen.event_bar(&ev), *expected);
+        }
+    }
+
+    #[test]
+    fn test_display_events() {
+        let stat = &Stat {
+            name_lookup: Duration::from_millis(1),
+            connect: Duration::from_millis(2),
+            app_connect: Duration::from_millis(3),
+            pre_transfer: Duration::from_millis(4),
+            start_transfer: Duration::from_millis(5),
+            total: Duration::from_millis(6),
+            ..Stat::default()
+        };
+        let config = Config::default();
+        let screen = Screen::new(&config, &stat);
+
+        let events = vec![
+            NetworkEvent::dns_lookup(stat),
+            NetworkEvent::tcp_handshake(stat),
+            NetworkEvent::tls_handshake(stat),
+            NetworkEvent::server_processing(stat),
+            NetworkEvent::content_transfer(stat),
+        ];
+
+        screen.display_events(&events);
+    }
+
+    #[test]
+    fn test_display_network_timings() {
+        let stat = &Stat {
+            name_lookup: Duration::from_millis(1),
+            connect: Duration::from_millis(2),
+            app_connect: Duration::from_millis(3),
+            pre_transfer: Duration::from_millis(4),
+            start_transfer: Duration::from_millis(5),
+            total: Duration::from_millis(6),
+            ..Stat::default()
+        };
+        let config = Config::default();
+        let screen = Screen::new(&config, &stat);
+
+        screen.display_network_timings();
+    }
+
+    #[test]
+    fn test_display_detailed_timings() {
+        let stat = &Stat {
+            name_lookup: Duration::from_millis(1),
+            connect: Duration::from_millis(2),
+            app_connect: Duration::from_millis(3),
+            pre_transfer: Duration::from_millis(4),
+            start_transfer: Duration::from_millis(5),
+            total: Duration::from_millis(6),
+            ..Stat::default()
+        };
+        let config = Config::default();
+        let screen = Screen::new(&config, &stat);
+
+        screen.display_detailed_timings();
+    }
+
+    #[test]
+    fn test_display_response_headers() {
+        let stat = Stat {
+            response_headers: vec![Header::from_str("Content-Type: text/html").unwrap()],
+            ..Stat::default()
+        };
+        let config = Config::default();
+        let screen = Screen::new(&config, &stat);
+
+        screen.display_response_headers();
+    }
+
+    #[test]
+    fn test_display_response_body() {
+        let stat = Stat {
+            response_body: "Hello, World!".as_bytes().to_vec(),
+            ..Stat::default()
+        };
+        let config = Config::default();
+        let screen = Screen::new(&config, &stat);
+
+        screen.display_response_body();
+    }
+
+    #[test]
+    fn test_display_output() {
+        let stat = Stat::default();
+        let config = Config {
+            display_response_body: true,
+            display_response_headers: true,
+            ..Default::default()
+        };
+        let screen = Screen::new(&config, &stat);
+
+        screen.display();
+    }
+
+    #[test]
+    fn test_handle_output() {
+        let stat = Stat {
+            response_body: "Hello, World!".as_bytes().to_vec(),
+            ..Stat::default()
+        };
+        let config = Config {
+            output: Some("output.txt".into()),
+            ..Config::default()
+        };
+        handle_output(&config, &stat).unwrap();
+
+        let mut file = std::fs::File::open("output.txt").unwrap();
+        let mut contents = String::new();
+        file.read_to_string(&mut contents).unwrap();
+        assert_eq!(contents, "Hello, World!");
+
+        // Clean up
+        std::fs::remove_file("output.txt").unwrap();
+    }
 }

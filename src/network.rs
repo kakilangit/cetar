@@ -16,7 +16,7 @@ use crate::{make_color, print_error};
 /// let config = Config {
 ///     url: Cow::Borrowed("https://example.com"),
 ///     method: Method::Get,
-///     color: "cyan".into(),
+///     color: "cyan".try_into().unwrap(),
 ///     request_headers: vec![],
 ///     request_body: None,
 ///     output: None,
@@ -131,7 +131,7 @@ impl<'a> curl::easy::Handler for Decorator<'a> {
 /// assert_eq!(header.value, "application/json");
 /// ```
 ///
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Header {
     /// Header key
     pub key: String,
@@ -200,6 +200,7 @@ impl std::str::FromStr for Header {
 /// ```rust
 /// use cetar::network::{Header, Stat};
 /// use std::time::Duration;
+/// use std::str::FromStr;
 ///
 /// let stat = Stat {
 ///     ip_address: Some("127.0.0.1".to_string()),
@@ -273,7 +274,7 @@ impl Stat {
     }
 
     /// Get the server processing time
-    pub fn waiting(&self) -> Option<Duration> {
+    pub fn server_processing(&self) -> Option<Duration> {
         if self.start_transfer > self.pre_transfer {
             Some(self.start_transfer - self.pre_transfer)
         } else {
@@ -282,7 +283,7 @@ impl Stat {
     }
 
     /// Get the content transfer time
-    pub fn data_transfer(&self) -> Option<Duration> {
+    pub fn content_transfer(&self) -> Option<Duration> {
         if self.total > self.start_transfer {
             Some(self.total - self.start_transfer)
         } else {
@@ -359,13 +360,13 @@ impl<'a> TryFrom<&mut curl::easy::Easy2<Decorator<'a>>> for Stat {
 /// use std::convert::TryFrom;
 ///
 /// let get = Method::Get;
-/// let post = Method::try_from("POST".to_string()).unwrap();
+/// let post = Method::try_from("POST").unwrap();
 ///
 /// assert_eq!(get, Method::Get);
 /// assert_eq!(post, Method::Post);
 /// ```
 ///
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Method {
     /// The GET method requests a representation of the specified resource. Requests using GET should only retrieve data.
     Get,
@@ -409,10 +410,10 @@ impl<'a> From<&'a Method> for &'a str {
     }
 }
 
-impl TryFrom<String> for Method {
+impl TryFrom<&str> for Method {
     type Error = anyhow::Error;
 
-    fn try_from(value: String) -> Result<Self, Self::Error> {
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
         match value.to_uppercase().as_str() {
             "GET" => Ok(Self::Get),
             "HEAD" => Ok(Self::Head),
@@ -451,7 +452,7 @@ impl TryFrom<String> for Method {
 ///
 /// let stat = send_request(&conf).unwrap();
 ///
-/// println!("Status code: {}", stat.response_status_code);
+/// println!("Status code: {:?}", stat.response_status_code);
 /// ```
 ///
 pub fn send_request(conf: &Config) -> anyhow::Result<Stat> {
@@ -501,4 +502,168 @@ pub fn send_request(conf: &Config) -> anyhow::Result<Stat> {
     easy.perform()?;
 
     Stat::try_from(&mut easy)
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use httpmock::prelude::*;
+    use std::str::FromStr;
+
+    #[test]
+    fn test_header_key_value() {
+        let header = Header::from_str("content-type: application/json").unwrap();
+        assert_eq!(header.key, "content-type");
+        assert_eq!(header.header_key(), "Content-Type");
+        assert_eq!(header.value, "application/json");
+    }
+
+    #[test]
+    fn test_method_try_from_str() {
+        let table = vec![
+            ("GET", Method::Get),
+            ("POST", Method::Post),
+            ("PUT", Method::Put),
+            ("DELETE", Method::Delete),
+            ("CONNECT", Method::Connect),
+            ("OPTIONS", Method::Options),
+            ("TRACE", Method::Trace),
+            ("PATCH", Method::Patch),
+            ("HEAD", Method::Head),
+        ];
+
+        for (method, expected) in table {
+            let result = Method::try_from(method).unwrap();
+            assert_eq!(result, expected);
+        }
+    }
+
+    #[test]
+    fn test_method_try_from_str_invalid() {
+        let result = Method::try_from("INVALID");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_method_from_str() {
+        let table = vec![
+            (Method::Get, "GET"),
+            (Method::Post, "POST"),
+            (Method::Put, "PUT"),
+            (Method::Delete, "DELETE"),
+            (Method::Connect, "CONNECT"),
+            (Method::Options, "OPTIONS"),
+            (Method::Trace, "TRACE"),
+            (Method::Patch, "PATCH"),
+            (Method::Head, "HEAD"),
+        ];
+
+        for (method, expected) in table {
+            let result: &str = (&method).into();
+            assert_eq!(result, expected);
+        }
+    }
+
+    #[test]
+    fn test_send_request_body() {
+        let methods = vec![Method::Post, Method::Put, Method::Patch];
+
+        for method in methods {
+            let server = MockServer::start();
+            let mock = server.mock(|when, then| {
+                when.path("/");
+                then.status(200)
+                    .header("content-type", "text/html")
+                    .body("ohi");
+            });
+
+            let conf = Config {
+                url: server.url("/").into(),
+                method,
+                verbose: true,
+                follow_redirects: true,
+                request_body: Some("oh".into()),
+                request_headers: vec![Header::from_str("content-type: text/plain").unwrap()],
+                ..Default::default()
+            };
+
+            let stat = send_request(&conf).unwrap();
+
+            mock.assert();
+
+            assert_eq!(stat.response_status_code.unwrap(), 200);
+            assert_eq!(stat.utf8_response_body().unwrap(), "ohi");
+        }
+    }
+
+    #[test]
+    fn test_send_request_nobody() {
+        let methods = vec![
+            Method::Head,
+            Method::Options,
+            Method::Trace,
+            Method::Connect,
+            Method::Delete,
+            Method::Get,
+            Method::Post,
+            Method::Put,
+        ];
+
+        for method in methods {
+            let server = MockServer::start();
+            let mock = server.mock(|when, then| {
+                when.path("/");
+                then.status(200).header("content-type", "text/html");
+            });
+
+            let conf = Config {
+                url: server.url("/").into(),
+                method,
+                verbose: true,
+                follow_redirects: true,
+                ..Default::default()
+            };
+
+            let stat = send_request(&conf).unwrap();
+
+            mock.assert();
+
+            assert_eq!(stat.response_status_code.unwrap(), 200);
+        }
+    }
+
+    #[test]
+    fn test_timing_stat() {
+        let stat = Stat {
+            name_lookup: Duration::from_secs(1),
+            connect: Duration::from_secs(2),
+            app_connect: Duration::from_secs(3),
+            pre_transfer: Duration::from_secs(4),
+            start_transfer: Duration::from_secs(5),
+            total: Duration::from_secs(6),
+            ..Default::default()
+        };
+
+        let one_sec = Duration::from_secs(1);
+        assert_eq!(stat.dns_lookup().unwrap(), one_sec);
+        assert_eq!(stat.tcp_handshake().unwrap(), one_sec);
+        assert_eq!(stat.tls_handshake().unwrap(), one_sec);
+        assert_eq!(stat.server_processing().unwrap(), one_sec);
+        assert_eq!(stat.content_transfer().unwrap(), one_sec);
+    }
+
+    #[test]
+    fn test_no_tls() {
+        let stat = Stat {
+            name_lookup: Duration::from_secs(1),
+            connect: Duration::from_secs(2),
+            app_connect: Duration::from_secs(1),
+            pre_transfer: Duration::from_secs(4),
+            start_transfer: Duration::from_secs(5),
+            total: Duration::from_secs(6),
+            ..Default::default()
+        };
+
+        assert!(stat.tls_handshake().is_none());
+    }
 }
