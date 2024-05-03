@@ -111,6 +111,8 @@ pub struct Config<'a> {
     pub output: Option<Cow<'a, str>>,
     pub display_response_body: bool,
     pub display_response_headers: bool,
+    pub follow_redirects: bool,
+    pub verbose: bool,
 }
 
 pub struct Decorator<'a> {
@@ -165,6 +167,8 @@ pub fn send_request(conf: &Config) -> anyhow::Result<Stat> {
 
     easy.url(&conf.url)?;
     easy.show_header(true)?;
+    easy.follow_location(conf.follow_redirects)?;
+    easy.verbose(conf.verbose)?;
 
     if !conf.request_headers.is_empty() {
         let mut headers = curl::easy::List::new();
@@ -185,7 +189,18 @@ pub fn send_request(conf: &Config) -> anyhow::Result<Stat> {
                 easy.post_field_size(ds)?;
             }
         }
-        Method::Put => easy.put(true)?,
+        Method::Patch => {
+            easy.custom_request("PATCH")?;
+            if let Some(ds) = data_size {
+                easy.post_field_size(ds)?;
+            }
+        }
+        Method::Put => {
+            easy.put(true)?;
+            if let Some(ds) = data_size {
+                easy.in_filesize(ds)?;
+            }
+        }
         _ => easy.custom_request((&conf.method).into())?,
     }
 

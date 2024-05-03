@@ -32,6 +32,12 @@ struct Args {
     #[clap(short, long, help = "Write output to <file>")]
     output: Option<String>,
 
+    #[clap(short = 'l', long = "location", help = "Follow HTTP 3xx redirects")]
+    follow_redirects: bool,
+
+    #[clap(short, long, help = "Verbose output")]
+    verbose: bool,
+
     #[clap(short = 'B', long, help = "Display response body")]
     display_response_body: bool,
 
@@ -69,6 +75,8 @@ impl TryFrom<Args> for cetar::network::Config<'_> {
             output: cli.output.map(|x| x.into()),
             display_response_body: cli.display_response_body,
             display_response_headers: cli.display_response_headers,
+            follow_redirects: cli.follow_redirects,
+            verbose: cli.verbose,
         })
     }
 }

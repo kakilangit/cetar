@@ -29,6 +29,8 @@ Options:
   -H, --headers <HEADERS>         Pass custom header(s) to server, example: -H 'Accept: application/json'
   -d, --data <DATA>               HTTP request data to send, example: -d 'key=value' -d @file.json -d '{"key": "value"}'
   -o, --output <OUTPUT>           Write output to <file>
+  -l, --location                  Follow HTTP 3xx redirects
+  -v, --verbose                   Verbose output
   -B, --display-response-body     Display response body
   -G, --display-response-headers  Display response headers
       --color <COLOR>             Main output color, available colors: black, red, green, yellow, blue, magenta, cyan, white [default: cyan]
