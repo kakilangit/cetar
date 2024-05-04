@@ -2,7 +2,7 @@
 [<img alt="crates.io" src="https://img.shields.io/crates/v/cetar.svg?style=for-the-badge&color=ff8b94&logo=rust" height="20">](https://crates.io/crates/cetar)
 [<img alt="docs.rs" src="https://img.shields.io/badge/docs.rs-cetar-bedc9c?style=for-the-badge&labelColor=555555&logo=docs.rs" height="20">](https://docs.rs/cetar)
 
-![Dall-E generated cetar image](https://raw.githubusercontent.com/kakilangit/cetar/main/static/cetar.png)
+![Dall-E generated cetar image](https://raw.githubusercontent.com/kakilangit/static/main/cetar/cetar.png)
 
 # Cetar
 
@@ -44,7 +44,7 @@ Options:
 
 ## Screenshot
 
-![Screenshot](https://raw.githubusercontent.com/kakilangit/cetar/main/static/cetar-screenshot.png)
+![Screenshot](https://raw.githubusercontent.com/kakilangit/static/main/cetar/cetar-screenshot.png)
 
 ## License
 

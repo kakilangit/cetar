@@ -1,6 +1,6 @@
 [package]
 name = "cetar"
-version = "0.1.5"
+version = "0.1.6"
 edition = "2021"
 description = "💥 CURL execution timing analyzer"
 documentation = "https://docs.rs/cetar"
